@@ -169,9 +169,9 @@ git push -u origin main
    | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
    | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/publishable key |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (**server-only** — Vercel never exposes non-`NEXT_PUBLIC_*` vars to the browser, but double-check you didn't rename it) |
-   | `NEXT_PUBLIC_SITE_URL` / `SITE_URL` | Your Vercel URL, e.g. `https://your-app.vercel.app` (or custom domain) |
-   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Your SMTP provider (Gmail: `smtp.gmail.com`, `465`, your address, an [app password](https://myaccount.google.com/apppasswords) — not your normal password) |
-   | `EMAIL_FROM` | e.g. `"Atelier Jewelry <you@gmail.com>"` |
+   | `NEXT_PUBLIC_SITE_URL` / `SITE_URL` | Your public domain, e.g. `https://www.nimmisbling.com` — **not** the `*.vercel.app` URL, or auth email links will point there. `NEXT_PUBLIC_*` values are inlined at build time, so **redeploy** after changing it |
+   | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` | Your SMTP provider — ideally the same one Supabase Auth uses (7.3b), e.g. Resend: `smtp.resend.com`, `465`, `resend`, your Resend API key. (Gmail also works: `smtp.gmail.com`, `465`, your address, an [app password](https://myaccount.google.com/apppasswords) — not your normal password) |
+   | `EMAIL_FROM` | e.g. `"Nimmis Bling <no-reply@nimmisbling.com>"` (the domain must be verified with your SMTP provider) |
    | `ADMIN_BOOTSTRAP_USERNAME` / `ADMIN_BOOTSTRAP_PASSWORD` / `ADMIN_BOOTSTRAP_EMAIL` | Only needed once, for `npm run seed` — see 7.4 |
    | `CRON_SECRET` | A random secret (`openssl rand -hex 32`) — enables the auto-cancel-orders cron (7.6) and is otherwise required for that route to respond at all |
 
@@ -185,15 +185,63 @@ git push -u origin main
 
 ### 7.3 Point Supabase Auth at your real domain
 
-In the Supabase dashboard → **Authentication → URL Configuration**:
+**a) Custom domain and redirect URLs.**
 
-- **Site URL**: your Vercel URL (must match `NEXT_PUBLIC_SITE_URL` above)
-- **Redirect URLs**: add `https://your-app.vercel.app/auth/callback` (and
-  the same for any preview-deployment domain pattern you want signup/
-  password-reset emails to work from, e.g. `https://*.vercel.app/auth/callback`)
+First, in Vercel → **Settings → Domains**, add `www.nimmisbling.com` and
+`nimmisbling.com` and add the DNS records Vercel shows at your registrar
+(GoDaddy → **My Products → DNS**). Make `www.nimmisbling.com` the primary
+domain and redirect the apex and the `*.vercel.app` URL to it.
 
-Without this, the confirmation/recovery links Supabase emails out will
-redirect to `localhost` instead of your live site.
+Then in the Supabase dashboard → **Authentication → URL Configuration**:
+
+- **Site URL**: `https://www.nimmisbling.com` (must match
+  `NEXT_PUBLIC_SITE_URL` above)
+- **Redirect URLs**: add
+  - `https://www.nimmisbling.com/auth/callback`
+  - `https://www.nimmisbling.com/**`
+  - `https://nimmisbling.com/**`
+  - optionally `https://*.vercel.app/auth/callback` for preview deployments
+
+The app sends `emailRedirectTo: ${NEXT_PUBLIC_SITE_URL}/auth/callback`
+([src/lib/auth/actions.ts](src/lib/auth/actions.ts)). If that URL isn't in
+the allow-list, Supabase silently falls back to the **Site URL**. That's
+why links end up on `localhost` or the `*.vercel.app` URL instead of your
+domain.
+
+**b) Send auth emails from your own domain.**
+
+By default Supabase sends signup-confirmation and password-reset emails
+from its own shared sender (`noreply@mail.app.supabase.io`), and it only
+allows a few emails per hour. The app's `SMTP_*` variables **do not**
+affect these emails; they only cover the app's own notifications. To send
+as Nimmis Bling:
+
+1. Create a [Resend](https://resend.com) account → **Domains → Add
+   Domain** → `nimmisbling.com`.
+2. Add the DNS records Resend shows (an MX record and TXT records for SPF
+   and DKIM) in GoDaddy → **DNS → Add New Record**. Copy the values
+   exactly, then wait until Resend shows the domain as **Verified**.
+3. Create a Resend API key.
+4. Supabase → **Authentication → Emails → SMTP Settings → Enable Custom
+   SMTP**:
+
+   | Field | Value |
+   | --- | --- |
+   | Sender email | `no-reply@nimmisbling.com` |
+   | Sender name | `Nimmis Bling` |
+   | Host | `smtp.resend.com` |
+   | Port | `465` |
+   | Username | `resend` |
+   | Password | your Resend API key |
+
+5. Supabase → **Authentication → Emails → Templates**: rebrand the
+   "Confirm signup" and "Reset password" subject and body. Keep
+   `{{ .ConfirmationURL }}` in the body; that's the link itself.
+
+To check it works, sign up with a new address. The email should come from
+Nimmis Bling, and the link should open
+`https://www.nimmisbling.com/auth/callback?...`. Emails sent before the
+change still carry the old link.
 
 ### 7.4 Bootstrap the admin account against the hosted project
 
@@ -210,7 +258,7 @@ ADMIN_BOOTSTRAP_EMAIL=admin@yourdomain.com \
 npm run seed
 ```
 
-Sign in at `https://your-app.vercel.app/sign-in` with that username/
+Sign in at `https://www.nimmisbling.com/sign-in` with that username/
 password — you'll be forced to change it immediately
 (`must_change_password`), and the bootstrap password is never stored or
 retrievable after that.
