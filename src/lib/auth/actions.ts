@@ -71,13 +71,45 @@ export async function signUpAction(input: SignUpInput): Promise<ActionResult> {
   });
 
   if (error) {
+    // Always log the real cause — the generic message below tells the
+    // customer nothing, and Supabase Auth failures are otherwise invisible
+    // (check Vercel → Logs, or Supabase → Logs → Auth).
+    console.error("[signUpAction] supabase.auth.signUp failed:", {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    });
+
+    const message = error.message.toLowerCase();
     // Belt-and-suspenders: a race between the pre-check above and this
     // call (or Supabase Auth's own duplicate-email detection) can still
     // surface here.
-    if (error.message.toLowerCase().includes("registered")) {
+    if (error.code === "user_already_exists" || error.code === "email_exists" || message.includes("registered")) {
       return actionError("Please fix the errors below.", {
         email: ["An account with this email already exists."],
       });
+    }
+    if (error.code === "weak_password") {
+      return actionError("Please fix the errors below.", {
+        password: [error.message],
+      });
+    }
+    if (error.code === "email_address_invalid") {
+      return actionError("Please fix the errors below.", {
+        email: ["This email address can't be used. Please use a different one."],
+      });
+    }
+    // Verification email couldn't be sent: Supabase's built-in mailer only
+    // delivers to the project's team members and a few emails/hour, so a
+    // live store needs custom SMTP (README 7.3b); a misconfigured custom
+    // SMTP fails the same way.
+    if (
+      error.code === "email_address_not_authorized" ||
+      error.code === "over_email_send_rate_limit" ||
+      message.includes("sending confirmation email") ||
+      message.includes("rate limit")
+    ) {
+      return actionError("We couldn't send your verification email right now. Please try again later.");
     }
     return actionError("Could not create your account. Please try again.");
   }
