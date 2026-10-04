@@ -13,15 +13,18 @@ import {
   SheetTrigger,
   SheetClose,
 } from "@/components/ui/sheet";
+import { StoreWordmark } from "@/components/layout/store-wordmark";
 
 export function MobileNav({
   navLinks,
   accountHref,
   accountLabel,
+  storeName,
 }: {
   navLinks: { href: string; label: string }[];
   accountHref: string;
   accountLabel: string;
+  storeName: string;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -35,7 +38,7 @@ export function MobileNav({
       <SheetContent side="left" className="w-72">
         <SheetHeader>
           <SheetTitle className="font-heading text-lg">
-            Atelier <span className="text-primary">Jewelry</span>
+            <StoreWordmark name={storeName} />
           </SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-1 px-4" aria-label="Mobile">

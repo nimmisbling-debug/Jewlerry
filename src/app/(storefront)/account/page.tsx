@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { requireUser } from "@/lib/permissions";
+import { getStoreName } from "@/lib/settings/queries";
 import { UpdateProfileForm } from "@/components/storefront/update-profile-form";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DeleteAccountDialog } from "@/components/storefront/delete-account-dialog";
@@ -9,7 +10,7 @@ import { DeleteAccountDialog } from "@/components/storefront/delete-account-dial
 export const metadata: Metadata = { title: "My Profile" };
 
 export default async function AccountProfilePage() {
-  const profile = await requireUser();
+  const [profile, storeName] = await Promise.all([requireUser(), getStoreName()]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +40,7 @@ export default async function AccountProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>Appearance</CardTitle>
-          <CardDescription>Choose how Atelier Jewelry looks on your devices.</CardDescription>
+          <CardDescription>Choose how {storeName} looks on your devices.</CardDescription>
         </CardHeader>
         <CardContent>
           <ThemeToggle persistForUser />

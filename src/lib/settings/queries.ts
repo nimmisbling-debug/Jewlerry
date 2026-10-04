@@ -20,6 +20,28 @@ export const getSiteSettings = cache(async () => {
   return data;
 });
 
+/** Only used if the site_settings row can't be read (it always exists after migrations). */
+export const DEFAULT_STORE_NAME = "Atelier Jewelry";
+
+/** The admin-configured store name (Admin → Settings), for headers, titles, invoices, etc. */
+export async function getStoreName(): Promise<string> {
+  const settings = await getSiteSettings();
+  return settings?.store_name?.trim() || DEFAULT_STORE_NAME;
+}
+
+/**
+ * Same as getStoreName, but with an explicit client — for code that runs
+ * outside a request with cookies (emails sent from cron jobs), where
+ * getSiteSettings' cookie-based client can't be created.
+ */
+export async function getStoreNameWith(supabase: SupabaseClient<Database>): Promise<string> {
+  const { data, error } = await supabase.from("site_settings").select("store_name").single();
+  if (error) {
+    console.error("[getStoreNameWith] failed:", error);
+  }
+  return data?.store_name?.trim() || DEFAULT_STORE_NAME;
+}
+
 /**
  * admin_settings is admin-only (RLS). This variant takes an explicit
  * client so it also works from `lib/notifications/events.ts`, which is

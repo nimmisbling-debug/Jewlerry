@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/permissions";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getOrderById } from "@/lib/orders/queries";
 import { InvoiceDocument } from "@/lib/invoices/invoice-document";
+import { getStoreName } from "@/lib/settings/queries";
 
 /**
  * Streams a freshly-generated invoice PDF for one order. Server-rendered
@@ -31,7 +32,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ord
     return new Response("Forbidden", { status: 403 });
   }
 
-  const buffer = await renderToBuffer(InvoiceDocument({ order }));
+  const storeName = await getStoreName();
+  const buffer = await renderToBuffer(InvoiceDocument({ order, storeName }));
 
   return new Response(new Uint8Array(buffer), {
     headers: {

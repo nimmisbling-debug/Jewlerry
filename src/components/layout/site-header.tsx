@@ -2,10 +2,11 @@ import Link from "next/link";
 import type { Route } from "next";
 import { User } from "lucide-react";
 import { getCurrentProfile } from "@/lib/permissions";
-import { getSiteSettings } from "@/lib/settings/queries";
+import { getSiteSettings, DEFAULT_STORE_NAME } from "@/lib/settings/queries";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CartBadge } from "@/components/layout/cart-badge";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { StoreWordmark } from "@/components/layout/store-wordmark";
 import { NotificationBell } from "@/components/layout/notification-bell";
 
 const NAV_LINKS = [
@@ -20,6 +21,7 @@ export async function SiteHeader() {
 
   const accountHref: Route = profile ? (profile.role === "admin" ? "/admin" : "/account") : "/sign-in";
   const accountLabel = profile ? "My Account" : "Sign in";
+  const storeName = settings?.store_name?.trim() || DEFAULT_STORE_NAME;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
@@ -29,9 +31,10 @@ export async function SiteHeader() {
             navLinks={NAV_LINKS.map((l) => ({ href: l.href, label: l.label }))}
             accountHref={accountHref}
             accountLabel={accountLabel}
+            storeName={storeName}
           />
           <Link href="/" className="font-heading text-xl font-semibold tracking-wide">
-            Atelier <span className="text-primary">Jewelry</span>
+            <StoreWordmark name={storeName} />
           </Link>
         </div>
 

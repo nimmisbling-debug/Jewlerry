@@ -1,6 +1,9 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import { getServerEnv } from "@/lib/env";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { getStoreNameWith } from "@/lib/settings/queries";
+import { STORE_NAME_TOKEN, escapeHtml } from "@/lib/email/templates";
 
 let cachedTransporter: Transporter | null | undefined;
 
@@ -34,9 +37,27 @@ function getTransporter(): Transporter | null {
  * and logged the same way: a notification email failing to send should
  * never fail the order/payment action that triggered it.
  */
+/**
+ * Sender display name always follows the admin's store name; only the
+ * address part of EMAIL_FROM is used ("Any Name <a@b.com>" or "a@b.com").
+ */
+function fromHeader(emailFrom: string, storeName: string): string {
+  const address = emailFrom.match(/<([^>]+)>/)?.[1] ?? emailFrom.trim();
+  return `"${storeName.replace(/["\\]/g, "")}" <${address}>`;
+}
+
 export async function sendEmail(params: { to: string; subject: string; html: string; text?: string }): Promise<void> {
   const transporter = getTransporter();
   const env = getServerEnv();
+
+  // Service-role client: this also runs from cron routes with no user session.
+  const storeName = await getStoreNameWith(createAdminSupabaseClient());
+  params = {
+    ...params,
+    subject: params.subject.replaceAll(STORE_NAME_TOKEN, storeName),
+    html: params.html.replaceAll(STORE_NAME_TOKEN, escapeHtml(storeName)),
+    text: params.text?.replaceAll(STORE_NAME_TOKEN, storeName),
+  };
 
   if (!transporter) {
     console.log(`[email:dev] To: ${params.to}\nSubject: ${params.subject}\n${params.text ?? params.html}`);
@@ -45,7 +66,7 @@ export async function sendEmail(params: { to: string; subject: string; html: str
 
   try {
     await transporter.sendMail({
-      from: env.EMAIL_FROM,
+      from: fromHeader(env.EMAIL_FROM, storeName),
       to: params.to,
       subject: params.subject,
       html: params.html,

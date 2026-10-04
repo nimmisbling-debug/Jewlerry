@@ -43,13 +43,13 @@ const links = [
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ] as const;
 
-export function AdminSidebar({ adminName }: { adminName: string }) {
+export function AdminSidebar({ adminName, storeName }: { adminName: string; storeName: string }) {
   const pathname = usePathname();
 
   return (
     <aside className="flex w-full shrink-0 flex-col border-border bg-sidebar text-sidebar-foreground md:h-screen md:w-60 md:border-r">
       <div className="border-b border-sidebar-border px-5 py-5">
-        <p className="font-heading text-lg font-semibold">Atelier Admin</p>
+        <p className="font-heading text-lg font-semibold">{storeName} Admin</p>
         <p className="truncate text-sm text-sidebar-foreground/70">{adminName}</p>
       </div>
       <nav aria-label="Admin" className="flex-1 space-y-1 px-3 py-4">

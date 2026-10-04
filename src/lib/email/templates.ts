@@ -1,6 +1,12 @@
 import { formatCurrency } from "@/lib/utils";
 
-const BRAND = "Atelier Jewelry";
+/**
+ * Placeholder for the admin-configured store name. Templates stay
+ * synchronous and settings-agnostic; sendEmail() swaps this for the
+ * current (HTML-escaped) site_settings.store_name right before sending.
+ */
+export const STORE_NAME_TOKEN = "{{STORE_NAME}}";
+const BRAND = STORE_NAME_TOKEN;
 const GOLD = "#a8823c";
 const INK = "#2b2420";
 
@@ -16,7 +22,7 @@ const INK = "#2b2420";
  * labels) — cheap insurance against a future caller passing through
  * something less trusted.
  */
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

@@ -5,7 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/permissions";
 import { getProductBySlug } from "@/lib/products/queries";
 import { getProductReviews, getMyReviewForProduct, getEligibleReviewOrderId } from "@/lib/reviews/queries";
-import { getSiteSettings } from "@/lib/settings/queries";
+import { getSiteSettings, getStoreName } from "@/lib/settings/queries";
 import { ReviewFormDialog } from "@/components/storefront/review-form-dialog";
 import { DeleteReviewButton } from "@/components/storefront/delete-review-button";
 import { computeDiscount } from "@/lib/products/pricing";
@@ -28,7 +28,8 @@ export async function generateMetadata({
   const product = await getProductBySlug(supabase, slug);
   if (!product) return { title: "Product not found" };
 
-  const description = product.description.slice(0, 160) || `Shop ${product.name} at Atelier Jewelry.`;
+  const description =
+    product.description.slice(0, 160) || `Shop ${product.name} at ${await getStoreName()}.`;
   return {
     title: product.name,
     description,

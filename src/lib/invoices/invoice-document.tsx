@@ -71,13 +71,13 @@ const styles = StyleSheet.create({
   },
 });
 
-export function InvoiceDocument({ order }: { order: OrderDetail }) {
+export function InvoiceDocument({ order, storeName }: { order: OrderDetail; storeName: string }) {
   return (
     <Document title={`Invoice ${order.invoiceNumber}`}>
       <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.brand}>Atelier Jewelry</Text>
+            <Text style={styles.brand}>{storeName}</Text>
           </View>
           <View style={styles.invoiceMeta}>
             <Text style={styles.invoiceTitle}>INVOICE</Text>
@@ -134,7 +134,7 @@ export function InvoiceDocument({ order }: { order: OrderDetail }) {
         </View>
 
         <Text style={styles.footer}>
-          This invoice was generated automatically by Atelier Jewelry and reflects the order as
+          This invoice was generated automatically by {storeName} and reflects the order as
           recorded in our system. Thank you for your order.
         </Text>
       </Page>

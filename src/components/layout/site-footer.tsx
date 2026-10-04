@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getSiteSettings } from "@/lib/settings/queries";
+import { getSiteSettings, DEFAULT_STORE_NAME } from "@/lib/settings/queries";
 
 export async function SiteFooter() {
   const settings = await getSiteSettings();
+  const storeName = settings?.store_name?.trim() || DEFAULT_STORE_NAME;
   const socialLinks = (settings?.social_links ?? []) as { label: string; url: string }[];
 
   return (
@@ -10,7 +11,7 @@ export async function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <p className="font-heading text-lg font-semibold">
-            {settings?.store_name ?? "Atelier Jewelry"}
+            {storeName}
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
             Fine jewelry, thoughtfully made.
@@ -76,7 +77,7 @@ export async function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} {settings?.store_name ?? "Atelier Jewelry"}. All rights
+        &copy; {new Date().getFullYear()} {storeName}. All rights
         reserved.
       </div>
     </footer>

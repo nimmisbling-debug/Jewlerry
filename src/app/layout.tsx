@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
-import { getSiteSettings } from "@/lib/settings/queries";
+import { getSiteSettings, getStoreName } from "@/lib/settings/queries";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,21 +20,24 @@ const cormorant = Cormorant_Garamond({
   weight: ["500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
-  ),
-  title: {
-    default: "Atelier Jewelry",
-    template: "%s | Atelier Jewelry",
-  },
-  description:
-    "Fine jewelry, thoughtfully made. Shop rings, necklaces, earrings and bracelets.",
-  openGraph: {
-    type: "website",
-    siteName: "Atelier Jewelry",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const storeName = await getStoreName();
+  return {
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    ),
+    title: {
+      default: storeName,
+      template: `%s | ${storeName}`,
+    },
+    description:
+      "Fine jewelry, thoughtfully made. Shop rings, necklaces, earrings and bracelets.",
+    openGraph: {
+      type: "website",
+      siteName: storeName,
+    },
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   const settings = await getSiteSettings();
