@@ -21,8 +21,7 @@ import {
   HelpCircle,
   ScrollText,
 } from "lucide-react";
-import { signOutAction } from "@/lib/auth/actions";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -76,15 +75,7 @@ export function AdminSidebar({ adminName, storeName }: { adminName: string; stor
         })}
       </nav>
       <div className="border-t border-sidebar-border p-3">
-        <form action={signOutAction}>
-          <Button
-            type="submit"
-            variant="ghost"
-            className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-          >
-            Sign out
-          </Button>
-        </form>
+        <SignOutButton className="text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground" />
       </div>
     </aside>
   );

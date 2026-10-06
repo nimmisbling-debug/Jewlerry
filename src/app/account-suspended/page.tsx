@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 export const metadata: Metadata = { title: "Account suspended" };
 
@@ -14,7 +15,7 @@ export default function AccountSuspendedPage() {
             place orders.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             If you believe this is a mistake, please reach out via our{" "}
             <a href="/contact" className="font-medium text-primary underline-offset-4 hover:underline">
@@ -22,6 +23,7 @@ export default function AccountSuspendedPage() {
             </a>{" "}
             and we&apos;ll look into it.
           </p>
+          <SignOutButton className="w-auto" />
         </CardContent>
       </Card>
     </div>

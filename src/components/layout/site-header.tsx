@@ -32,6 +32,7 @@ export async function SiteHeader() {
             accountHref={accountHref}
             accountLabel={accountLabel}
             storeName={storeName}
+            isSignedIn={!!profile}
           />
           <Link href="/" className="font-heading text-xl font-semibold tracking-wide">
             <StoreWordmark name={storeName} />

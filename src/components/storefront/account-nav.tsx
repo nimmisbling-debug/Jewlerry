@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 import { User, ShieldCheck, Package, Bell, Star } from "lucide-react";
 
 const links = [
@@ -42,6 +43,9 @@ export function AccountNav({ fullName }: { fullName: string }) {
           </Link>
         );
       })}
+      <div className="mt-2 border-t border-border pt-2">
+        <SignOutButton className="px-2 font-normal text-muted-foreground hover:text-foreground" />
+      </div>
     </nav>
   );
 }

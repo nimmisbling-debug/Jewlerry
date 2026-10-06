@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangePasswordForm } from "@/components/storefront/change-password-form";
 import { requireUser } from "@/lib/permissions";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 export const metadata: Metadata = { title: "Set a new password" };
 
@@ -30,6 +31,7 @@ export default async function ForcePasswordChangePage() {
         </CardHeader>
         <CardContent>
           <ChangePasswordForm redirectTo={profile.role === "admin" ? "/admin" : "/account"} />
+          <SignOutButton className="mt-3 justify-center text-muted-foreground" />
         </CardContent>
       </Card>
     </div>

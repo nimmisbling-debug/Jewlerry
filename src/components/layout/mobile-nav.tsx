@@ -14,17 +14,20 @@ import {
   SheetClose,
 } from "@/components/ui/sheet";
 import { StoreWordmark } from "@/components/layout/store-wordmark";
+import { SignOutButton } from "@/components/layout/sign-out-button";
 
 export function MobileNav({
   navLinks,
   accountHref,
   accountLabel,
   storeName,
+  isSignedIn,
 }: {
   navLinks: { href: string; label: string }[];
   accountHref: string;
   accountLabel: string;
   storeName: string;
+  isSignedIn: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
 
@@ -61,6 +64,9 @@ export function MobileNav({
               {accountLabel}
             </Link>
           </SheetClose>
+          {isSignedIn && (
+            <SignOutButton className="px-3 py-2.5 text-base font-normal text-foreground" />
+          )}
         </nav>
       </SheetContent>
     </Sheet>

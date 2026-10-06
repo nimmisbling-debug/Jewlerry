@@ -183,12 +183,6 @@ export async function signInAction(
   return actionOk({ defaultRedirect });
 }
 
-export async function signOutAction(): Promise<never> {
-  const supabase = await createServerSupabaseClient();
-  await supabase.auth.signOut();
-  redirect("/sign-in");
-}
-
 export async function forgotPasswordAction(
   input: ForgotPasswordInput,
 ): Promise<ActionResult> {
