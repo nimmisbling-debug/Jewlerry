@@ -124,6 +124,14 @@ export const PAYMENT_STATUS = {
 } as const;
 export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
 
+/** "full" = whole order total up front; "delivery_fee" = only the delivery fee now, the rest cash on delivery. */
+export const PAYMENT_TYPES = ["full", "delivery_fee"] as const;
+
+export const PAYMENT_TYPE_LABELS: Record<(typeof PAYMENT_TYPES)[number], string> = {
+  full: "Full payment",
+  delivery_fee: "Delivery fee (rest on delivery)",
+};
+
 export const PAYMENT_REJECTION_REASONS = [
   "Wrong amount",
   "Invalid transaction",

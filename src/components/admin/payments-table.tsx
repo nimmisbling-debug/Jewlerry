@@ -8,6 +8,7 @@ import { DataTable } from "@/components/admin/data-table";
 import { PaymentStatusBadge } from "@/components/shared/payment-status-badge";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PAYMENT_TYPE_LABELS } from "@/constants";
 import type { PaymentListItem } from "@/lib/payments/queries";
 
 export function PaymentsTable({ payments }: { payments: PaymentListItem[] }) {
@@ -31,7 +32,12 @@ export function PaymentsTable({ payments }: { payments: PaymentListItem[] }) {
       {
         id: "amount",
         header: "Amount",
-        cell: ({ row }) => formatCurrency(row.original.amount),
+        cell: ({ row }) => (
+          <div>
+            <p>{formatCurrency(row.original.amount)}</p>
+            <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABELS[row.original.paymentType]}</p>
+          </div>
+        ),
       },
       {
         id: "reference",

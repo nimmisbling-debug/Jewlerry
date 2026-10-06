@@ -42,7 +42,13 @@ export default async function SubmitPaymentPage({
           <CardTitle>Submit payment for {order.orderNumber}</CardTitle>
         </CardHeader>
         <CardContent>
-          <PaymentSubmitForm orderId={order.id} amountDue={order.total} methods={methods} />
+          <PaymentSubmitForm
+            orderId={order.id}
+            total={order.total}
+            deliveryFee={order.shippingCost}
+            currencyCode={order.currencyCode}
+            methods={methods}
+          />
         </CardContent>
       </Card>
     </div>

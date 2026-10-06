@@ -8,6 +8,7 @@ import { PaymentReviewPanel } from "@/components/admin/payment-review-panel";
 import { PaymentStatusBadge } from "@/components/shared/payment-status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PAYMENT_TYPE_LABELS } from "@/constants";
 
 export const metadata: Metadata = { title: "Review Payment" };
 
@@ -68,6 +69,10 @@ export default async function AdminPaymentDetailPage({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Method</span>
               <span className="text-foreground">{payment.methodName ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Payment option</span>
+              <span className="text-foreground">{PAYMENT_TYPE_LABELS[payment.paymentType]}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Amount</span>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { DEFAULT_PAGE_SIZE } from "@/constants";
-import type { Database, PaymentMethodType, PaymentStatusValue } from "@/types/database";
+import type { Database, PaymentMethodType, PaymentStatusValue, PaymentTypeValue } from "@/types/database";
 
 export interface PaymentMethodDetail {
   id: number;
@@ -132,6 +132,7 @@ export interface PaymentListItem {
   orderNumber: string;
   customerName: string;
   methodName: string | null;
+  paymentType: PaymentTypeValue;
   amount: number;
   transactionReference: string | null;
   status: PaymentStatusValue;
@@ -163,7 +164,7 @@ export async function searchPayments(
   let query = supabase
     .from("payments")
     .select(
-      "id, order_id, amount, transaction_reference, status, created_at, orders(order_number, customer_name), payment_methods(name)",
+      "id, order_id, payment_type, amount, transaction_reference, status, created_at, orders(order_number, customer_name), payment_methods(name)",
       { count: "exact" },
     )
     .order("created_at", { ascending: false });
@@ -180,6 +181,7 @@ export async function searchPayments(
   const rows = data as unknown as {
     id: number;
     order_id: number;
+    payment_type: PaymentTypeValue;
     amount: number;
     transaction_reference: string | null;
     status: PaymentStatusValue;
@@ -195,6 +197,7 @@ export async function searchPayments(
       orderNumber: row.orders?.order_number ?? "—",
       customerName: row.orders?.customer_name ?? "—",
       methodName: row.payment_methods?.name ?? null,
+      paymentType: row.payment_type,
       amount: row.amount,
       transactionReference: row.transaction_reference,
       status: row.status,
@@ -213,6 +216,7 @@ export interface PaymentDetail {
   orderNumber: string;
   customerName: string;
   methodName: string | null;
+  paymentType: PaymentTypeValue;
   amount: number;
   transactionReference: string | null;
   screenshotPath: string;
@@ -227,6 +231,7 @@ export interface PaymentDetail {
 function mapPaymentDetail(row: {
   id: number;
   order_id: number;
+  payment_type: PaymentTypeValue;
   amount: number;
   transaction_reference: string | null;
   screenshot_path: string;
@@ -245,6 +250,7 @@ function mapPaymentDetail(row: {
     orderNumber: row.orders?.order_number ?? "—",
     customerName: row.orders?.customer_name ?? "—",
     methodName: row.payment_methods?.name ?? null,
+    paymentType: row.payment_type,
     amount: row.amount,
     transactionReference: row.transaction_reference,
     screenshotPath: row.screenshot_path,
@@ -264,7 +270,7 @@ export async function getPaymentById(
   const { data, error } = await supabase
     .from("payments")
     .select(
-      "id, order_id, amount, transaction_reference, screenshot_path, note, status, rejection_reason, rejection_note, reviewed_at, created_at, orders(order_number, customer_name), payment_methods(name)",
+      "id, order_id, payment_type, amount, transaction_reference, screenshot_path, note, status, rejection_reason, rejection_note, reviewed_at, created_at, orders(order_number, customer_name), payment_methods(name)",
     )
     .eq("id", id)
     .single();
@@ -280,7 +286,7 @@ export async function getPaymentsForOrder(
   const { data, error } = await supabase
     .from("payments")
     .select(
-      "id, order_id, amount, transaction_reference, screenshot_path, note, status, rejection_reason, rejection_note, reviewed_at, created_at, orders(order_number, customer_name), payment_methods(name)",
+      "id, order_id, payment_type, amount, transaction_reference, screenshot_path, note, status, rejection_reason, rejection_note, reviewed_at, created_at, orders(order_number, customer_name), payment_methods(name)",
     )
     .eq("order_id", orderId)
     .order("created_at", { ascending: false });

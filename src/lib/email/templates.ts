@@ -127,6 +127,8 @@ export function paymentApprovedEmail(params: {
   amount: number;
   currencyCode: string;
   orderId: number;
+  /** Remaining amount to collect in cash on delivery (delivery-fee-only payments). */
+  dueOnDelivery?: number;
 }) {
   const subject = `Payment confirmed — ${params.orderNumber}`;
   const html = layout(
@@ -134,6 +136,11 @@ export function paymentApprovedEmail(params: {
     `<p>Hi ${escapeHtml(params.customerName)},</p>
      <p>Your payment of <strong>${formatCurrency(params.amount, params.currencyCode)}</strong> for order
      <strong>${escapeHtml(params.orderNumber)}</strong> has been confirmed. We're now preparing your order.</p>
+     ${
+       params.dueOnDelivery && params.dueOnDelivery > 0
+         ? `<p>Please keep <strong>${formatCurrency(params.dueOnDelivery, params.currencyCode)}</strong> ready to pay in cash when your order is delivered.</p>`
+         : ""
+     }
      ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
   );
   return { subject, html };

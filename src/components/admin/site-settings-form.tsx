@@ -57,7 +57,7 @@ export function SiteSettingsForm({ defaultValues }: { defaultValues: SiteSetting
           description="Products at or below this quantity show a 'Low stock' badge."
         />
         <TextField
-          label="Shipping cost"
+          label="Delivery fee (shipping cost)"
           type="number"
           step="0.01"
           register={register("shippingCost")}

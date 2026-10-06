@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+import type { Database, PaymentTypeValue } from "@/types/database";
 import type { PaymentMethodFormInput } from "@/lib/validations/admin";
 
 export async function submitPaymentRpc(
@@ -9,7 +9,7 @@ export async function submitPaymentRpc(
     orderId: number;
     customerId: string;
     paymentMethodId: number;
-    amount: number;
+    paymentType: PaymentTypeValue;
     transactionReference: string | null;
     screenshotPath: string;
     note?: string | null;
@@ -19,7 +19,7 @@ export async function submitPaymentRpc(
     p_order_id: params.orderId,
     p_customer_id: params.customerId,
     p_payment_method_id: params.paymentMethodId,
-    p_amount: params.amount,
+    p_payment_type: params.paymentType,
     p_transaction_reference: params.transactionReference,
     p_screenshot_path: params.screenshotPath,
     p_note: params.note ?? null,
@@ -53,6 +53,9 @@ export function friendlySubmitPaymentError(message: string): string {
   if (message === "ORDER_NOT_FOUND") return "Order not found.";
   if (message.startsWith("ORDER_NOT_PAYABLE")) {
     return "This order can no longer accept a payment submission.";
+  }
+  if (message === "DELIVERY_FEE_NOT_AVAILABLE") {
+    return "This order has no delivery fee, so please pay the full amount.";
   }
   return "Could not submit your payment. Please try again.";
 }

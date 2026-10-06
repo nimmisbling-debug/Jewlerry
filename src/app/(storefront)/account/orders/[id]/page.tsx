@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PAYMENT_TYPE_LABELS } from "@/constants";
 
 export const metadata: Metadata = { title: "Order Details" };
 
@@ -147,6 +148,20 @@ export default async function AccountOrderDetailPage({
                   <span>Total</span>
                   <span>{formatCurrency(order.total, order.currencyCode)}</span>
                 </div>
+                {order.amountPaid > 0 && (
+                  <>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Paid</span>
+                      <span>{formatCurrency(order.amountPaid, order.currencyCode)}</span>
+                    </div>
+                    {order.balanceDue > 0 && (
+                      <div className="flex justify-between font-medium text-foreground">
+                        <span>{order.paymentType === "delivery_fee" ? "Due on delivery (cash)" : "Balance due"}</span>
+                        <span>{formatCurrency(order.balanceDue, order.currencyCode)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -179,6 +194,7 @@ export default async function AccountOrderDetailPage({
                       {formatCurrency(latestPayment.amount, order.currencyCode)} via{" "}
                       {latestPayment.methodName ?? "—"}
                     </p>
+                    <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABELS[latestPayment.paymentType]}</p>
                     <p className="text-xs text-muted-foreground">Submitted {formatDate(latestPayment.createdAt)}</p>
                     {latestPayment.status === "rejected" && latestPayment.rejectionReason && (
                       <p className="mt-1 text-xs text-destructive">Rejected: {latestPayment.rejectionReason}</p>

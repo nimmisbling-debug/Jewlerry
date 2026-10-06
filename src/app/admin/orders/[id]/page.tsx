@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { PAYMENT_TYPE_LABELS } from "@/constants";
 
 export const metadata: Metadata = { title: "Order Details" };
 
@@ -110,6 +111,20 @@ export default async function AdminOrderDetailPage({
                   <span>Total</span>
                   <span>{formatCurrency(order.total, order.currencyCode)}</span>
                 </div>
+                {order.amountPaid > 0 && (
+                  <>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Paid</span>
+                      <span>{formatCurrency(order.amountPaid, order.currencyCode)}</span>
+                    </div>
+                    {order.balanceDue > 0 && (
+                      <div className="flex justify-between font-medium text-foreground">
+                        <span>{order.paymentType === "delivery_fee" ? "Due on delivery (cash)" : "Balance due"}</span>
+                        <span>{formatCurrency(order.balanceDue, order.currencyCode)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -144,6 +159,7 @@ export default async function AdminOrderDetailPage({
                       <p className="text-foreground">
                         {formatCurrency(payment.amount, order.currencyCode)} via {payment.methodName ?? "—"}
                       </p>
+                      <p className="text-xs text-muted-foreground">{PAYMENT_TYPE_LABELS[payment.paymentType]}</p>
                       <p className="text-xs text-muted-foreground">Submitted {formatDate(payment.createdAt)}</p>
                     </div>
                     <div className="flex items-center gap-2">

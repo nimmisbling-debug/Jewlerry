@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { DEFAULT_PAGE_SIZE } from "@/constants";
-import type { Database, OrderStatusValue } from "@/types/database";
+import type { Database, OrderStatusValue, PaymentTypeValue } from "@/types/database";
 
 export interface CartLineDetail {
   productId: number;
@@ -234,6 +234,12 @@ export interface OrderDetail {
   cancelledReason: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Sum of approved payments. */
+  amountPaid: number;
+  /** total - amountPaid: still owed, collected as cash on delivery when paymentType is "delivery_fee". */
+  balanceDue: number;
+  /** Type of the most recent approved payment, or null if nothing is approved yet. */
+  paymentType: PaymentTypeValue | null;
   items: OrderItemDetail[];
   statusHistory: OrderStatusEvent[];
 }
@@ -243,7 +249,7 @@ export async function getOrderById(
   supabase: SupabaseClient<Database>,
   orderId: number,
 ): Promise<OrderDetail | null> {
-  const [{ data: order, error }, { data: items }, { data: history }] = await Promise.all([
+  const [{ data: order, error }, { data: items }, { data: history }, { data: approvedPayments }] = await Promise.all([
     supabase.from("orders").select("*").eq("id", orderId).single(),
     supabase
       .from("order_items")
@@ -254,9 +260,17 @@ export async function getOrderById(
       .select("id, old_status, new_status, reason, created_at")
       .eq("order_id", orderId)
       .order("created_at"),
+    supabase
+      .from("payments")
+      .select("amount, payment_type")
+      .eq("order_id", orderId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false }),
   ]);
 
   if (error || !order) return null;
+
+  const amountPaid = (approvedPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
 
   return {
     id: order.id,
@@ -280,6 +294,9 @@ export async function getOrderById(
     cancelledReason: order.cancelled_reason,
     createdAt: order.created_at,
     updatedAt: order.updated_at,
+    amountPaid,
+    balanceDue: Math.max(0, Number(order.total) - amountPaid),
+    paymentType: approvedPayments?.[0]?.payment_type ?? null,
     items: (items ?? []).map((i) => ({
       id: i.id,
       productId: i.product_id,

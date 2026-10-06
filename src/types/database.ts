@@ -35,6 +35,7 @@ export type OrderStatusValue =
   | "cancelled";
 
 export type PaymentStatusValue = "pending" | "approved" | "rejected";
+export type PaymentTypeValue = "full" | "delivery_fee";
 export type ReturnRequestStatusValue = "pending" | "approved" | "rejected";
 export type PaymentMethodType = "mobile_wallet" | "bank_transfer" | "other";
 export type NotificationTypeValue =
@@ -367,6 +368,7 @@ export interface Database {
           id: number;
           order_id: number;
           payment_method_id: number | null;
+          payment_type: PaymentTypeValue;
           amount: number;
           transaction_reference: string | null;
           screenshot_path: string;
@@ -517,7 +519,7 @@ export interface Database {
           p_order_id: number;
           p_customer_id: string;
           p_payment_method_id: number;
-          p_amount: number;
+          p_payment_type: PaymentTypeValue;
           p_transaction_reference: string | null;
           p_screenshot_path: string;
           p_note?: string | null;

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -19,17 +20,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { submitPaymentAction } from "@/lib/payments/actions";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentMethodDetail } from "@/lib/payments/queries";
+import type { PaymentTypeValue } from "@/types/database";
 
 export function PaymentSubmitForm({
   orderId,
-  amountDue,
+  total,
+  deliveryFee,
+  currencyCode,
   methods,
 }: {
   orderId: number;
-  amountDue: number;
+  total: number;
+  /** The order's delivery fee (shipping cost from Settings at checkout); 0 hides the advance option. */
+  deliveryFee: number;
+  currencyCode: string;
   methods: PaymentMethodDetail[];
 }) {
   const router = useRouter();
+  const [paymentType, setPaymentType] = React.useState<PaymentTypeValue>("full");
+  const amountDue = paymentType === "delivery_fee" ? deliveryFee : total;
   const [methodId, setMethodId] = React.useState<string>(methods[0] ? String(methods[0].id) : "");
   const [reference, setReference] = React.useState("");
   const [note, setNote] = React.useState("");
@@ -56,6 +65,7 @@ export function PaymentSubmitForm({
         {
           orderId,
           paymentMethodId: Number(methodId),
+          paymentType,
           transactionReference: reference || undefined,
           note: note || undefined,
         },
@@ -81,8 +91,47 @@ export function PaymentSubmitForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {deliveryFee > 0 && (
+        <div className="space-y-2">
+          <Label>How would you like to pay?</Label>
+          <RadioGroup
+            value={paymentType}
+            onValueChange={(value) => setPaymentType(value as PaymentTypeValue)}
+            className="gap-2"
+          >
+            <Label
+              htmlFor="pay-full"
+              className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 font-normal has-data-[state=checked]:border-primary"
+            >
+              <RadioGroupItem id="pay-full" value="full" className="mt-0.5" />
+              <span className="space-y-0.5">
+                <span className="block font-medium text-foreground">
+                  Pay full amount — {formatCurrency(total, currencyCode)}
+                </span>
+                <span className="block text-xs text-muted-foreground">Nothing to pay on delivery.</span>
+              </span>
+            </Label>
+            <Label
+              htmlFor="pay-delivery-fee"
+              className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3 font-normal has-data-[state=checked]:border-primary"
+            >
+              <RadioGroupItem id="pay-delivery-fee" value="delivery_fee" className="mt-0.5" />
+              <span className="space-y-0.5">
+                <span className="block font-medium text-foreground">
+                  Pay delivery fee only — {formatCurrency(deliveryFee, currencyCode)}
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Pay the remaining {formatCurrency(total - deliveryFee, currencyCode)} in cash on delivery.
+                </span>
+              </span>
+            </Label>
+          </RadioGroup>
+        </div>
+      )}
+
       <p className="text-sm text-muted-foreground">
-        Amount due: <span className="font-medium text-foreground">{formatCurrency(amountDue)}</span>
+        Amount to pay now:{" "}
+        <span className="font-medium text-foreground">{formatCurrency(amountDue, currencyCode)}</span>
       </p>
 
       <div className="space-y-2">

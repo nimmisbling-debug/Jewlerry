@@ -68,7 +68,7 @@ export async function submitPaymentAction(
     orderId: parsed.data.orderId,
     customerId: profile.id,
     paymentMethodId: parsed.data.paymentMethodId,
-    amount: order.total,
+    paymentType: parsed.data.paymentType,
     transactionReference: parsed.data.transactionReference || null,
     screenshotPath: uploadResult.path,
     note: parsed.data.note,
@@ -85,7 +85,7 @@ export async function submitPaymentAction(
     customerId: profile.id,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
-    amount: order.total,
+    amount: result.payment.amount,
     currencyCode: order.currencyCode,
   });
 
@@ -141,6 +141,7 @@ export async function reviewPaymentAction(input: ReviewPaymentInput): Promise<Ac
         customerEmail: order.customerEmail,
         amount: result.payment.amount,
         currencyCode: order.currencyCode,
+        dueOnDelivery: result.payment.payment_type === "delivery_fee" ? order.balanceDue : 0,
       });
     } else {
       await notifyPaymentRejected(serviceClient, {

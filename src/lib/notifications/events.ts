@@ -141,6 +141,7 @@ export async function notifyPaymentApproved(
     customerEmail: string;
     amount: number;
     currencyCode: string;
+    dueOnDelivery?: number;
   },
 ): Promise<void> {
   const { subject, html } = paymentApprovedEmail(params);

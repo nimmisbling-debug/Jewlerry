@@ -131,6 +131,22 @@ export function InvoiceDocument({ order, storeName }: { order: OrderDetail; stor
             <Text style={styles.grandTotalLabel}>Total</Text>
             <Text style={styles.grandTotalValue}>{formatCurrency(order.total, order.currencyCode)}</Text>
           </View>
+          <View style={[styles.totalRow, { marginTop: 6 }]}>
+            <Text style={styles.totalLabel}>
+              Paid{order.paymentType === "delivery_fee" ? " (delivery fee)" : ""}
+            </Text>
+            <Text>{formatCurrency(order.amountPaid, order.currencyCode)}</Text>
+          </View>
+          <View style={styles.grandTotalRow}>
+            <Text style={styles.grandTotalLabel}>
+              {order.balanceDue === 0
+                ? "Balance due"
+                : order.paymentType === "delivery_fee"
+                  ? "Due on delivery (cash)"
+                  : "Amount due"}
+            </Text>
+            <Text style={styles.grandTotalValue}>{formatCurrency(order.balanceDue, order.currencyCode)}</Text>
+          </View>
         </View>
 
         <Text style={styles.footer}>

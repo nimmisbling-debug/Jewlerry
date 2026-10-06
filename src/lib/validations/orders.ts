@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PAYMENT_REJECTION_REASONS, MAX_RETURN_PROOF_IMAGES } from "@/constants";
+import { PAYMENT_REJECTION_REASONS, PAYMENT_TYPES, MAX_RETURN_PROOF_IMAGES } from "@/constants";
 
 /** bigint identity PKs (everything except profile-linked uuid fields). */
 const id = () => z.number().int().positive();
@@ -28,6 +28,7 @@ export type CheckoutInput = z.infer<typeof checkoutSchema>;
 export const submitPaymentSchema = z.object({
   orderId: id(),
   paymentMethodId: id(),
+  paymentType: z.enum(PAYMENT_TYPES),
   transactionReference: z.string().trim().max(200).optional(),
   note: z.string().trim().max(500).optional(),
   // The screenshot itself is validated separately (file type/size) in
