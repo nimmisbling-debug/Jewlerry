@@ -216,7 +216,10 @@ export interface OrderDetail {
   id: number;
   orderNumber: string;
   invoiceNumber: string;
-  customerId: string;
+  /** Null for guest orders. */
+  customerId: string | null;
+  /** Set only on guest orders: the secret in their /order/{token} link. */
+  guestAccessToken: string | null;
   status: OrderStatusValue;
   subtotal: number;
   shippingCost: number;
@@ -277,6 +280,7 @@ export async function getOrderById(
     orderNumber: order.order_number,
     invoiceNumber: order.invoice_number,
     customerId: order.customer_id,
+    guestAccessToken: order.guest_access_token,
     status: order.status,
     subtotal: order.subtotal,
     shippingCost: order.shipping_cost,
@@ -314,4 +318,25 @@ export async function getOrderById(
       createdAt: h.created_at,
     })),
   };
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Guest order lookup by the secret token in its /order/{token} link. Guests
+ * have no session, so RLS can't grant this — callers must pass the
+ * service-role client, and the token match below is the access check.
+ */
+export async function getOrderByGuestToken(
+  adminClient: SupabaseClient<Database>,
+  token: string,
+): Promise<OrderDetail | null> {
+  if (!UUID_RE.test(token)) return null;
+  const { data } = await adminClient
+    .from("orders")
+    .select("id")
+    .eq("guest_access_token", token)
+    .maybeSingle();
+  if (!data) return null;
+  return getOrderById(adminClient, data.id);
 }

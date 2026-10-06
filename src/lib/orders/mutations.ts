@@ -5,7 +5,8 @@ import type { Database, OrderStatusValue } from "@/types/database";
 export async function createOrderRpc(
   supabase: SupabaseClient<Database>,
   params: {
-    customerId: string;
+    /** Null for a guest checkout. */
+    customerId: string | null;
     items: { productId: number; quantity: number }[];
     customerName: string;
     customerPhone: string;

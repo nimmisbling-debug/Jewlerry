@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import type { Route } from "next";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ImageOff } from "lucide-react";
+import { ImageOff, Minus, Plus, X } from "lucide-react";
 import { checkoutDeliverySchema, type CheckoutDeliveryInput } from "@/lib/validations/orders";
 import { getCartDetailsAction, createOrderAction } from "@/lib/orders/actions";
 import { useCartStore } from "@/store/cart-store";
@@ -16,36 +18,52 @@ import { TextField, TextareaField } from "@/components/forms/text-field";
 import { FieldGroup } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CartSuggestions } from "@/components/storefront/cart-suggestions";
 import type { CartLineDetail } from "@/lib/orders/queries";
 
 export function CheckoutClient({
   shippingCost,
   currencyCode,
+  isGuest,
   defaultValues,
 }: {
   shippingCost: number;
   currencyCode: string;
+  /** Not signed in: checks out as a guest and gets a private order link. */
+  isGuest: boolean;
   defaultValues: { customerName: string; customerPhone: string; customerEmail: string };
 }) {
   const router = useRouter();
   const mounted = useMounted();
   const items = useCartStore((s) => s.items);
+  const setQuantity = useCartStore((s) => s.setQuantity);
+  const removeItem = useCartStore((s) => s.removeItem);
   const clearCart = useCartStore((s) => s.clear);
 
   const [details, setDetails] = React.useState<CartLineDetail[] | null>(null);
-  const [loadingDetails, setLoadingDetails] = React.useState(true);
   const [pending, startTransition] = React.useTransition();
 
+  // Live-synced with the cart store, so quantity edits, removals and items
+  // added from the suggestions below all update the order review + totals.
+  // Previous details stay on screen while re-fetching (no skeleton flash,
+  // and the delivery form below never unmounts and loses what was typed).
+  const itemsKey = items.map((i) => `${i.productId}:${i.quantity}`).join(",");
   React.useEffect(() => {
     if (!mounted) return;
-    (async () => {
-      setLoadingDetails(true);
-      const result = await getCartDetailsAction(items);
-      setLoadingDetails(false);
-      if (result.success) setDetails(result.data);
+    let cancelled = false;
+    void (async () => {
+      const current = useCartStore.getState().items;
+      if (current.length === 0) {
+        if (!cancelled) setDetails([]);
+        return;
+      }
+      const result = await getCartDetailsAction(current);
+      if (!cancelled && result.success) setDetails(result.data);
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on mounted only: this is a one-time fetch when checkout loads, not a live sync with the cart store
-  }, [mounted]);
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted, itemsKey]);
 
   const {
     register,
@@ -89,11 +107,11 @@ export function CheckoutClient({
 
       clearCart();
       toast.success("Order placed successfully.");
-      router.push(`/account/orders/${result.data.orderId}`);
+      router.push(result.data.orderPath as Route);
     });
   }
 
-  if (!mounted || loadingDetails) {
+  if (!mounted || details === null) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-24 w-full" />
@@ -102,8 +120,15 @@ export function CheckoutClient({
     );
   }
 
-  if (!details || details.length === 0) {
-    return <p className="text-muted-foreground">Your cart is empty. Add something before checking out.</p>;
+  if (details.length === 0) {
+    return (
+      <div className="space-y-4">
+        <p className="text-muted-foreground">Your cart is empty. Add something before checking out.</p>
+        <Button asChild>
+          <Link href="/products">Browse products</Link>
+        </Button>
+      </div>
+    );
   }
 
   return (
@@ -111,6 +136,14 @@ export function CheckoutClient({
       <div className="space-y-6">
         <div>
           <h2 className="mb-3 font-heading text-lg font-semibold">Delivery details</h2>
+          {isGuest && (
+            <p className="mb-4 rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
+              No account needed — just fill in your details. Already have an account?{" "}
+              <Link href="/sign-in?returnTo=/checkout" className="font-medium text-foreground underline">
+                Sign in
+              </Link>
+            </p>
+          )}
           <FieldGroup>
             <TextField label="Full name" register={register("customerName")} error={errors.customerName} />
             <TextField label="Phone number" type="tel" register={register("customerPhone")} error={errors.customerPhone} />
@@ -130,7 +163,8 @@ export function CheckoutClient({
           <h2 className="mb-3 font-heading text-lg font-semibold">Order review</h2>
           <div className="space-y-3">
             {details.map((line) => {
-              const lineOk = line.exists && line.isActive && line.availableStock >= line.requestedQuantity;
+              const available = line.exists && line.isActive && line.availableStock > 0;
+              const lineOk = available && line.availableStock >= line.requestedQuantity;
               return (
                 <div key={line.productId} className="flex gap-3 rounded-lg border border-border/70 p-3">
                   <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -142,34 +176,78 @@ export function CheckoutClient({
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-1 flex-col justify-center">
-                    <p className="text-sm font-medium text-foreground">{line.name}</p>
-                    <p className="text-xs text-muted-foreground">Qty {line.requestedQuantity}</p>
-                    {!lineOk && (
-                      <p className="text-xs text-destructive">
-                        {!line.exists || !line.isActive
-                          ? "No longer available"
-                          : `Only ${line.availableStock} in stock`}{" "}
-                        —{" "}
-                        <a href="/cart" className="underline">
-                          update your cart
-                        </a>
-                      </p>
-                    )}
+                  <div className="flex flex-1 flex-col justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{line.name}</p>
+                        {!lineOk && (
+                          <p className="text-xs text-destructive">
+                            {!available
+                              ? "No longer available — please remove"
+                              : `Only ${line.availableStock} in stock — please lower the quantity`}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-7"
+                        onClick={() => removeItem(line.productId)}
+                        aria-label={`Remove ${line.name}`}
+                      >
+                        <X className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      {available ? (
+                        <div className="flex items-center rounded-md border border-input">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            disabled={line.requestedQuantity <= 1}
+                            onClick={() => setQuantity(line.productId, line.requestedQuantity - 1)}
+                            aria-label="Decrease quantity"
+                          >
+                            <Minus className="size-3.5" />
+                          </Button>
+                          <span className="w-8 text-center text-sm" aria-live="polite">
+                            {line.requestedQuantity}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7"
+                            disabled={line.requestedQuantity >= line.availableStock}
+                            onClick={() => setQuantity(line.productId, line.requestedQuantity + 1)}
+                            aria-label="Increase quantity"
+                          >
+                            <Plus className="size-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span />
+                      )}
+                      {lineOk && (
+                        <p className="text-sm font-medium text-foreground">
+                          {formatCurrency(line.unitPrice * line.requestedQuantity, currencyCode)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  {lineOk && (
-                    <p className="self-center text-sm font-medium text-foreground">
-                      {formatCurrency(line.unitPrice * line.requestedQuantity, currencyCode)}
-                    </p>
-                  )}
                 </div>
               );
             })}
           </div>
         </div>
+
+        <CartSuggestions currencyCode={currencyCode} />
       </div>
 
-      <div className="h-fit space-y-4 rounded-lg border border-border/70 p-4">
+      <div className="h-fit space-y-4 rounded-lg border border-border/70 p-4 lg:sticky lg:top-20">
         <h2 className="font-heading text-lg font-semibold">Order Summary</h2>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">

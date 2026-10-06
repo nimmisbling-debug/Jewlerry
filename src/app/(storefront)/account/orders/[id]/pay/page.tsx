@@ -48,6 +48,7 @@ export default async function SubmitPaymentPage({
             deliveryFee={order.shippingCost}
             currencyCode={order.currencyCode}
             methods={methods}
+            returnPath={`/account/orders/${order.id}`}
           />
         </CardContent>
       </Card>

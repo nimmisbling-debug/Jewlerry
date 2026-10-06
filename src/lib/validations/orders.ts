@@ -29,6 +29,8 @@ export const submitPaymentSchema = z.object({
   orderId: id(),
   paymentMethodId: id(),
   paymentType: z.enum(PAYMENT_TYPES),
+  /** Guest orders: the secret from their /order/{token} link, instead of a session. */
+  guestToken: z.uuid().optional(),
   transactionReference: z.string().trim().max(200).optional(),
   note: z.string().trim().max(500).optional(),
   // The screenshot itself is validated separately (file type/size) in

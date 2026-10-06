@@ -237,7 +237,9 @@ export interface Database {
           id: number;
           order_number: string;
           invoice_number: string;
-          customer_id: string;
+          /** Null for guest orders, which are identified by guest_access_token instead. */
+          customer_id: string | null;
+          guest_access_token: string | null;
           status: OrderStatusValue;
           subtotal: number;
           shipping_cost: number;
@@ -494,7 +496,7 @@ export interface Database {
       lookup_email_for_login: { Args: { p_identifier: string }; Returns: string | null };
       create_order: {
         Args: {
-          p_customer_id: string;
+          p_customer_id: string | null;
           p_items: Json;
           p_customer_name: string;
           p_customer_phone: string;
@@ -517,12 +519,13 @@ export interface Database {
       submit_payment: {
         Args: {
           p_order_id: number;
-          p_customer_id: string;
+          p_customer_id: string | null;
           p_payment_method_id: number;
           p_payment_type: PaymentTypeValue;
           p_transaction_reference: string | null;
           p_screenshot_path: string;
           p_note?: string | null;
+          p_guest_access_token?: string | null;
         };
         Returns: Database["public"]["Tables"]["payments"]["Row"];
       };

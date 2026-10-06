@@ -40,7 +40,8 @@ export async function notifyOrderCreated(
   params: {
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     total: number;
@@ -74,7 +75,8 @@ export async function notifyOrderStatusChanged(
   params: {
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     statusLabel: string;
@@ -98,7 +100,8 @@ export async function notifyPaymentSubmitted(
     paymentId: number;
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     amount: number;
@@ -136,7 +139,8 @@ export async function notifyPaymentApproved(
   params: {
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     amount: number;
@@ -199,7 +203,8 @@ export async function notifyReturnRequested(
     returnRequestId: number;
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     title: string;
@@ -232,7 +237,7 @@ export async function notifyReturnRequested(
 
 export async function notifyReturnApproved(
   supabase: SupabaseClient<Database>,
-  params: { orderId: number; orderNumber: string; customerId: string; customerName: string; customerEmail: string },
+  params: { orderId: number; orderNumber: string; customerId: string | null; guestToken?: string | null; customerName: string; customerEmail: string },
 ): Promise<void> {
   const { subject, html } = returnApprovedEmail(params);
   await Promise.all([
@@ -251,7 +256,8 @@ export async function notifyReturnRejected(
   params: {
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     reason: string;
@@ -274,7 +280,8 @@ export async function notifyPaymentRejected(
   params: {
     orderId: number;
     orderNumber: string;
-    customerId: string;
+    customerId: string | null;
+    guestToken?: string | null;
     customerName: string;
     customerEmail: string;
     reason: string;

@@ -129,6 +129,7 @@ export async function reviewReturnRequestAction(input: ReviewReturnRequestInput)
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerId: order.customerId,
+        guestToken: order.guestAccessToken,
         customerName: order.customerName,
         customerEmail: order.customerEmail,
       });
@@ -137,6 +138,7 @@ export async function reviewReturnRequestAction(input: ReviewReturnRequestInput)
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerId: order.customerId,
+        guestToken: order.guestAccessToken,
         customerName: order.customerName,
         customerEmail: order.customerEmail,
         reason: parsed.data.adminReason ?? "Not specified",
@@ -178,6 +180,7 @@ export async function markReturnReceivedAction(orderId: number): Promise<ActionR
     orderId: order.id,
     orderNumber: order.orderNumber,
     customerId: order.customerId,
+    guestToken: order.guestAccessToken,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     statusLabel: ORDER_STATUS_LABELS.returned,

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { toast } from "sonner";
 import { Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ export function PaymentSubmitForm({
   deliveryFee,
   currencyCode,
   methods,
+  guestToken,
+  returnPath,
 }: {
   orderId: number;
   total: number;
@@ -35,6 +38,10 @@ export function PaymentSubmitForm({
   deliveryFee: number;
   currencyCode: string;
   methods: PaymentMethodDetail[];
+  /** Guest orders only: the secret from the /order/{token} link. */
+  guestToken?: string;
+  /** Where to go after submitting (the order page). */
+  returnPath: string;
 }) {
   const router = useRouter();
   const [paymentType, setPaymentType] = React.useState<PaymentTypeValue>("full");
@@ -66,6 +73,7 @@ export function PaymentSubmitForm({
           orderId,
           paymentMethodId: Number(methodId),
           paymentType,
+          guestToken,
           transactionReference: reference || undefined,
           note: note || undefined,
         },
@@ -76,7 +84,7 @@ export function PaymentSubmitForm({
         return;
       }
       toast.success("Payment submitted for review.");
-      router.push(`/account/orders/${orderId}`);
+      router.push(returnPath as Route);
       router.refresh();
     });
   }

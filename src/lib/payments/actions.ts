@@ -6,7 +6,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/audit";
 import { uploadPaymentProof, getPaymentProofSignedUrl } from "@/lib/storage/payment-proofs";
-import { getOrderById } from "@/lib/orders/queries";
+import { getOrderById, getOrderByGuestToken } from "@/lib/orders/queries";
 import { getPaymentById } from "@/lib/payments/queries";
 import {
   notifyPaymentSubmitted,
@@ -38,6 +38,10 @@ import { actionOk, actionError, type ActionResult } from "@/lib/action-result";
  * customer's own session client for the storage upload (so
  * storage.objects RLS actually gates it to their own folder), then the
  * service-role client for submit_payment (which the RPC's grant requires).
+ *
+ * Guests (input.guestToken) have no session: the token is checked against
+ * the order, and the proof is uploaded with the service-role client into
+ * the bucket's "guest/" folder (still private — only admins can read it).
  */
 export async function submitPaymentAction(
   input: SubmitPaymentInput,
@@ -48,25 +52,42 @@ export async function submitPaymentAction(
     return actionError("Please fix the errors below.", parsed.error.flatten().fieldErrors);
   }
 
-  const profile = await requireUser();
   const file = formData.get("file");
   if (!(file instanceof File)) return actionError("Please attach a payment screenshot.");
 
-  const supabase = await createServerSupabaseClient();
-  const order = await getOrderById(supabase, parsed.data.orderId);
-  if (!order) return actionError("Order not found.");
-  if (order.customerId !== profile.id) return actionError("You don't have access to this order.");
+  const admin = createAdminSupabaseClient();
+  const guestToken = parsed.data.guestToken ?? null;
+  let customerId: string | null = null;
+  // Who uploads the proof, and into which top-level folder (see storage RLS).
+  let uploadClient = admin;
+  let uploadFolder = "guest";
+  let order;
+
+  if (guestToken) {
+    order = await getOrderByGuestToken(admin, guestToken);
+    if (!order || order.id !== parsed.data.orderId) return actionError("Order not found.");
+  } else {
+    const profile = await requireUser();
+    customerId = profile.id;
+    const supabase = await createServerSupabaseClient();
+    uploadClient = supabase;
+    uploadFolder = profile.id;
+    order = await getOrderById(supabase, parsed.data.orderId);
+    if (!order) return actionError("Order not found.");
+    if (order.customerId !== profile.id) return actionError("You don't have access to this order.");
+  }
+
   if (!["unconfirmed", "payment_pending"].includes(order.status)) {
     return actionError("This order can no longer accept a payment submission.");
   }
 
-  const uploadResult = await uploadPaymentProof(supabase, profile.id, order.id, file);
+  const uploadResult = await uploadPaymentProof(uploadClient, uploadFolder, order.id, file);
   if (!uploadResult.ok) return actionError(uploadResult.error);
 
-  const admin = createAdminSupabaseClient();
   const result = await submitPaymentRpc(admin, {
     orderId: parsed.data.orderId,
-    customerId: profile.id,
+    customerId,
+    guestAccessToken: guestToken,
     paymentMethodId: parsed.data.paymentMethodId,
     paymentType: parsed.data.paymentType,
     transactionReference: parsed.data.transactionReference || null,
@@ -82,14 +103,15 @@ export async function submitPaymentAction(
     paymentId: result.payment.id,
     orderId: order.id,
     orderNumber: order.orderNumber,
-    customerId: profile.id,
+    customerId,
+    guestToken,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     amount: result.payment.amount,
     currencyCode: order.currencyCode,
   });
 
-  revalidatePath(`/account/orders/${parsed.data.orderId}`);
+  revalidatePath(guestToken ? `/order/${guestToken}` : `/account/orders/${parsed.data.orderId}`);
   revalidatePath("/admin/payments");
   return actionOk(undefined);
 }
@@ -137,6 +159,7 @@ export async function reviewPaymentAction(input: ReviewPaymentInput): Promise<Ac
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerId: order.customerId,
+        guestToken: order.guestAccessToken,
         customerName: order.customerName,
         customerEmail: order.customerEmail,
         amount: result.payment.amount,
@@ -148,6 +171,7 @@ export async function reviewPaymentAction(input: ReviewPaymentInput): Promise<Ac
         orderId: order.id,
         orderNumber: order.orderNumber,
         customerId: order.customerId,
+        guestToken: order.guestAccessToken,
         customerName: order.customerName,
         customerEmail: order.customerEmail,
         reason: parsed.data.rejectionReason ?? "Not specified",

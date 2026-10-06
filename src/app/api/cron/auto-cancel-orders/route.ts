@@ -37,7 +37,7 @@ export async function GET(request: Request) {
 
   const { data: staleOrders, error } = await admin
     .from("orders")
-    .select("id, order_number, customer_id, customer_name, customer_email")
+    .select("id, order_number, customer_id, guest_access_token, customer_name, customer_email")
     .eq("status", "unconfirmed")
     .lt("created_at", cutoffIso);
 
@@ -66,6 +66,7 @@ export async function GET(request: Request) {
       orderId: order.id,
       orderNumber: order.order_number,
       customerId: order.customer_id,
+      guestToken: order.guest_access_token,
       customerName: order.customer_name,
       customerEmail: order.customer_email,
       statusLabel: ORDER_STATUS_LABELS.cancelled,

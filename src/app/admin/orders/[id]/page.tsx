@@ -135,6 +135,7 @@ export default async function AdminOrderDetailPage({
             </CardHeader>
             <CardContent className="space-y-1 text-sm text-muted-foreground">
               <p className="text-foreground">{order.customerName}</p>
+              {!order.customerId && <p className="text-xs font-medium text-primary">Guest checkout (no account)</p>}
               <p>{order.customerPhone}</p>
               <p>{order.customerEmail}</p>
               <p>

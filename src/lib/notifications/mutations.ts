@@ -10,8 +10,10 @@ import type { Database, NotificationTypeValue } from "@/types/database";
  */
 export async function createNotification(
   supabase: SupabaseClient<Database>,
-  params: { userId: string; title: string; message: string; type: NotificationTypeValue },
+  params: { userId: string | null; title: string; message: string; type: NotificationTypeValue },
 ): Promise<void> {
+  // Guest orders have no account to notify in-app; they get email only.
+  if (!params.userId) return;
   const { error } = await supabase.from("notifications").insert({
     user_id: params.userId,
     title: params.title,

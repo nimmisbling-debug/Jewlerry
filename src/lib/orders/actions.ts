@@ -11,8 +11,10 @@ import {
 import { canCustomerTransition, canAdminTransition } from "@/lib/orders/transitions";
 import { checkoutSchema, updateOrderStatusSchema } from "@/lib/validations/orders";
 import type { CheckoutInput, UpdateOrderStatusInput } from "@/lib/validations/orders";
-import { requireUser, requireAdmin } from "@/lib/permissions";
+import { requireUser, requireAdmin, getCurrentProfile } from "@/lib/permissions";
+import { enforceRateLimit, getRequestIp } from "@/lib/auth/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { searchProducts } from "@/lib/products/queries";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/audit";
 import { notifyOrderCreated, notifyOrderStatusChanged } from "@/lib/notifications/events";
@@ -43,27 +45,74 @@ export async function getCartDetailsAction(
   return actionOk(details);
 }
 
+export interface SuggestedProduct {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  imageUrl: string | null;
+}
+
 /**
- * Checkout submission. Requires sign-in (orders.customer_id is a NOT NULL
- * FK to profiles — there's no guest checkout in this schema). All the
- * actual validation (stock, current prices, active/inactive) happens
- * inside the create_order RPC itself — this action just authenticates the
- * caller and translates the RPC's structured errors into something a
- * customer can act on.
+ * Public: a few in-stock products not already in the cart, so the cart and
+ * checkout pages can offer "add more" without sending the customer away.
+ */
+export async function getSuggestedProductsAction(
+  excludeProductIds: number[],
+): Promise<ActionResult<SuggestedProduct[]>> {
+  const parsed = z.array(z.number().int().positive()).max(100).safeParse(excludeProductIds);
+  if (!parsed.success) return actionError("Invalid cart data.");
+
+  const supabase = await createServerSupabaseClient();
+  const result = await searchProducts(
+    supabase,
+    { inStockOnly: true, sort: "newest", page: 1 },
+    { pageSize: 24 },
+  );
+  const exclude = new Set(parsed.data);
+  return actionOk(
+    result.items
+      .filter((p) => !exclude.has(p.id) && p.quantity_in_stock > 0)
+      .slice(0, 8)
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        price: p.price_after_discount,
+        imageUrl: p.primary_image_url,
+      })),
+  );
+}
+
+/**
+ * Checkout submission. Signed-in customers get an order on their account;
+ * anyone else checks out as a guest (customer_id null) and gets a private
+ * /order/{token} link instead. All the actual validation (stock, current
+ * prices, active/inactive) happens inside the create_order RPC itself —
+ * this action just identifies the caller and translates the RPC's
+ * structured errors into something a customer can act on.
  */
 export async function createOrderAction(
   input: CheckoutInput,
-): Promise<ActionResult<{ orderId: number }>> {
+): Promise<ActionResult<{ orderId: number; orderPath: string }>> {
   const parsed = checkoutSchema.safeParse(input);
   if (!parsed.success) {
     return actionError("Please fix the errors below.", parsed.error.flatten().fieldErrors);
   }
 
-  const profile = await requireUser({ returnTo: "/checkout" });
+  const profile = await getCurrentProfile();
+  if (profile && (profile.blocked_at || profile.deleted_at)) {
+    return actionError("Your account can't place orders. Please contact us for help.");
+  }
+  if (!profile) {
+    // Guests have no account to throttle per-user, so cap orders per IP.
+    const allowed = await enforceRateLimit("guest_order", await getRequestIp(), 10, 3600);
+    if (!allowed) return actionError("Too many orders from this network. Please try again later.");
+  }
 
   const admin = createAdminSupabaseClient();
   const result = await createOrderRpc(admin, {
-    customerId: profile.id,
+    customerId: profile?.id ?? null,
     items: parsed.data.items,
     customerName: parsed.data.customerName,
     customerPhone: parsed.data.customerPhone,
@@ -80,7 +129,8 @@ export async function createOrderAction(
   await notifyOrderCreated(admin, {
     orderId: result.order.id,
     orderNumber: result.order.order_number,
-    customerId: profile.id,
+    customerId: profile?.id ?? null,
+    guestToken: result.order.guest_access_token,
     customerName: parsed.data.customerName,
     customerEmail: parsed.data.customerEmail,
     total: result.order.total,
@@ -88,7 +138,10 @@ export async function createOrderAction(
   });
 
   revalidatePath("/account/orders");
-  return actionOk({ orderId: result.order.id });
+  const orderPath = result.order.guest_access_token
+    ? `/order/${result.order.guest_access_token}`
+    : `/account/orders/${result.order.id}`;
+  return actionOk({ orderId: result.order.id, orderPath });
 }
 
 /** Customer or admin cancelling an order still in a cancellable state. */
@@ -133,6 +186,7 @@ export async function cancelOrderAction(
     orderId,
     orderNumber: order.orderNumber,
     customerId: order.customerId,
+    guestToken: order.guestAccessToken,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     statusLabel: ORDER_STATUS_LABELS.cancelled,
@@ -196,6 +250,7 @@ export async function updateOrderStatusAction(
     orderId: parsed.data.orderId,
     orderNumber: order.orderNumber,
     customerId: order.customerId,
+    guestToken: order.guestAccessToken,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     statusLabel: ORDER_STATUS_LABELS[parsed.data.newStatus],

@@ -77,6 +77,7 @@ export async function submitReviewAction(input: ReviewFormInput): Promise<Action
           orderId: order.id,
           orderNumber: order.orderNumber,
           customerId: order.customerId,
+          guestToken: order.guestAccessToken,
           customerName: order.customerName,
           customerEmail: order.customerEmail,
           statusLabel: ORDER_STATUS_LABELS[newStatus],

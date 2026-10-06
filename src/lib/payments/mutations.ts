@@ -7,7 +7,9 @@ export async function submitPaymentRpc(
   supabase: SupabaseClient<Database>,
   params: {
     orderId: number;
-    customerId: string;
+    /** Exactly one of customerId / guestAccessToken. */
+    customerId: string | null;
+    guestAccessToken?: string | null;
     paymentMethodId: number;
     paymentType: PaymentTypeValue;
     transactionReference: string | null;
@@ -23,6 +25,7 @@ export async function submitPaymentRpc(
     p_transaction_reference: params.transactionReference,
     p_screenshot_path: params.screenshotPath,
     p_note: params.note ?? null,
+    p_guest_access_token: params.guestAccessToken ?? null,
   });
   if (error) return { ok: false as const, message: error.message };
   return { ok: true as const, payment: data };

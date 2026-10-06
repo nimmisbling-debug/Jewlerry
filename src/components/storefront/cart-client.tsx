@@ -11,6 +11,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import { useMounted } from "@/hooks/use-mounted";
 import { getCartDetailsAction } from "@/lib/orders/actions";
+import { CartSuggestions } from "@/components/storefront/cart-suggestions";
 import type { CartLineDetail } from "@/lib/orders/queries";
 
 export function CartClient({
@@ -72,7 +73,7 @@ export function CartClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on itemsKey, not `items` (new array identity every render) or `refresh`
   }, [mounted, itemsKey]);
 
-  if (!mounted || loading) {
+  if (!mounted || (loading && details === null)) {
     return (
       <div className="space-y-4">
         {Array.from({ length: 2 }).map((_, i) => (
@@ -195,6 +196,10 @@ export function CartClient({
             </div>
           </div>
         ))}
+
+        <div className="pt-4">
+          <CartSuggestions currencyCode={currencyCode} />
+        </div>
       </div>
 
       <div className="h-fit space-y-4 rounded-lg border border-border/70 p-4">
@@ -227,6 +232,9 @@ export function CartClient({
             <Link href="/checkout">Proceed to checkout</Link>
           </Button>
         )}
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/products">Continue shopping</Link>
+        </Button>
       </div>
     </div>
   );

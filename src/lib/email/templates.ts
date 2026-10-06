@@ -68,6 +68,13 @@ function button(href: string, label: string): string {
   return `<p style="margin:24px 0;"><a href="${href}" style="background:${GOLD};color:#fff;text-decoration:none;padding:10px 20px;border-radius:4px;font-size:14px;display:inline-block;">${label}</a></p>`;
 }
 
+/** Customer-facing order page: the private guest link for guest orders, else the account page. */
+function orderPath(params: { orderId: number; guestToken?: string | null }, suffix = ""): string {
+  return params.guestToken
+    ? `/order/${params.guestToken}${suffix}`
+    : `/account/orders/${params.orderId}${suffix}`;
+}
+
 function siteUrl(path: string): string {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   return `${base}${path}`;
@@ -79,6 +86,7 @@ export function orderConfirmationEmail(params: {
   total: number;
   currencyCode: string;
   orderId: number;
+  guestToken?: string | null;
 }) {
   const subject = `Order confirmation — ${params.orderNumber}`;
   const html = layout(
@@ -87,7 +95,7 @@ export function orderConfirmationEmail(params: {
      <p>We've received your order <strong>${escapeHtml(params.orderNumber)}</strong> for
      <strong>${formatCurrency(params.total, params.currencyCode)}</strong>. We'll email you again once your
      payment is confirmed and your order is on its way.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
@@ -97,6 +105,7 @@ export function orderStatusChangedEmail(params: {
   customerName: string;
   statusLabel: string;
   orderId: number;
+  guestToken?: string | null;
 }) {
   const subject = `Order update — ${params.orderNumber} is now ${params.statusLabel}`;
   const html = layout(
@@ -104,19 +113,19 @@ export function orderStatusChangedEmail(params: {
     `<p>Hi ${escapeHtml(params.customerName)},</p>
      <p>Your order <strong>${escapeHtml(params.orderNumber)}</strong> is now
      <strong>${escapeHtml(params.statusLabel)}</strong>.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
 
-export function paymentSubmittedEmail(params: { orderNumber: string; customerName: string; orderId: number }) {
+export function paymentSubmittedEmail(params: { orderNumber: string; customerName: string; orderId: number; guestToken?: string | null }) {
   const subject = `Payment received for review — ${params.orderNumber}`;
   const html = layout(
     "Payment submitted",
     `<p>Hi ${escapeHtml(params.customerName)},</p>
      <p>Thanks — we've received your payment proof for order <strong>${escapeHtml(params.orderNumber)}</strong>
      and it's now awaiting review. We'll email you as soon as it's confirmed.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
@@ -127,6 +136,7 @@ export function paymentApprovedEmail(params: {
   amount: number;
   currencyCode: string;
   orderId: number;
+  guestToken?: string | null;
   /** Remaining amount to collect in cash on delivery (delivery-fee-only payments). */
   dueOnDelivery?: number;
 }) {
@@ -141,7 +151,7 @@ export function paymentApprovedEmail(params: {
          ? `<p>Please keep <strong>${formatCurrency(params.dueOnDelivery, params.currencyCode)}</strong> ready to pay in cash when your order is delivered.</p>`
          : ""
      }
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
@@ -152,6 +162,7 @@ export function paymentRejectedEmail(params: {
   reason: string;
   note?: string | null;
   orderId: number;
+  guestToken?: string | null;
 }) {
   const subject = `Payment could not be confirmed — ${params.orderNumber}`;
   const html = layout(
@@ -160,31 +171,31 @@ export function paymentRejectedEmail(params: {
      <p>We weren't able to confirm your payment for order <strong>${escapeHtml(params.orderNumber)}</strong>.</p>
      <p><strong>Reason:</strong> ${escapeHtml(params.reason)}${params.note ? `<br/>${escapeHtml(params.note)}` : ""}</p>
      <p>Please submit a new payment for this order, or contact us if you believe this is a mistake.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}/pay`), "Submit payment again")}`,
+     ${button(siteUrl(orderPath(params, "/pay")), "Submit payment again")}`,
   );
   return { subject, html };
 }
 
-export function returnRequestedEmail(params: { orderNumber: string; customerName: string; orderId: number }) {
+export function returnRequestedEmail(params: { orderNumber: string; customerName: string; orderId: number; guestToken?: string | null }) {
   const subject = `Return request received — ${params.orderNumber}`;
   const html = layout(
     "Return request submitted",
     `<p>Hi ${escapeHtml(params.customerName)},</p>
      <p>We've received your return request for order <strong>${escapeHtml(params.orderNumber)}</strong>
      and it's now awaiting review. We'll email you as soon as it's been reviewed.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
 
-export function returnApprovedEmail(params: { orderNumber: string; customerName: string; orderId: number }) {
+export function returnApprovedEmail(params: { orderNumber: string; customerName: string; orderId: number; guestToken?: string | null }) {
   const subject = `Return approved — ${params.orderNumber}`;
   const html = layout(
     "Your return was approved",
     `<p>Hi ${escapeHtml(params.customerName)},</p>
      <p>Your return request for order <strong>${escapeHtml(params.orderNumber)}</strong> has been approved.
      Please ship the item(s) back to us — we'll update your order once we receive them.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
@@ -194,6 +205,7 @@ export function returnRejectedEmail(params: {
   customerName: string;
   reason: string;
   orderId: number;
+  guestToken?: string | null;
 }) {
   const subject = `Return request declined — ${params.orderNumber}`;
   const html = layout(
@@ -202,7 +214,7 @@ export function returnRejectedEmail(params: {
      <p>We weren't able to approve your return request for order <strong>${escapeHtml(params.orderNumber)}</strong>.</p>
      <p><strong>Reason:</strong> ${escapeHtml(params.reason)}</p>
      <p>If you believe this is a mistake, please contact us for help.</p>
-     ${button(siteUrl(`/account/orders/${params.orderId}`), "View your order")}`,
+     ${button(siteUrl(orderPath(params)), "View your order")}`,
   );
   return { subject, html };
 }
@@ -229,6 +241,7 @@ export function newOrderAdminAlertEmail(params: {
   total: number;
   currencyCode: string;
   orderId: number;
+  guestToken?: string | null;
 }) {
   const subject = `New order — ${params.orderNumber}`;
   const html = layout(
