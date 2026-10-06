@@ -233,7 +233,7 @@ export function CartClient({
           </Button>
         )}
         <Button asChild variant="outline" className="w-full">
-          <Link href="/products">Continue shopping</Link>
+          <Link href="/products">Continue browsing</Link>
         </Button>
       </div>
     </div>

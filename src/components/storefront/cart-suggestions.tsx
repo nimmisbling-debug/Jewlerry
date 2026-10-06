@@ -11,9 +11,10 @@ import { useCartStore } from "@/store/cart-store";
 import { getSuggestedProductsAction, type SuggestedProduct } from "@/lib/orders/actions";
 
 /**
- * "Add more to your order": a row of in-stock products not yet in the cart,
- * each addable in one tap without leaving the cart/checkout page. The parent
- * re-fetches its own cart details when the store changes, so totals update.
+ * Cart add-ons: in-stock products tagged "box" that aren't in the cart yet,
+ * each addable in one tap without leaving the cart/checkout page, plus an
+ * always-visible "Continue browsing" link. The parent re-fetches its own
+ * cart details when the store changes, so totals update.
  */
 export function CartSuggestions({ currencyCode }: { currencyCode: string }) {
   const items = useCartStore((s) => s.items);
@@ -34,14 +35,16 @@ export function CartSuggestions({ currencyCode }: { currencyCode: string }) {
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-heading text-lg font-semibold">Add more to your order</h2>
-        <Button asChild variant="link" size="sm" className="px-0">
-          <Link href="/products">Browse all products</Link>
+        <h2 className="font-heading text-lg font-semibold">
+          {visible.length > 0 ? "Add a box to your order" : "Want something else?"}
+        </h2>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/products">Continue browsing</Link>
         </Button>
       </div>
       {visible.length > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {visible.slice(0, 4).map((product) => (
+          {visible.map((product) => (
             <div key={product.id} className="flex flex-col overflow-hidden rounded-lg border border-border/70">
               <Link href={`/products/${product.slug}`} className="relative block aspect-square bg-muted">
                 {product.imageUrl ? (

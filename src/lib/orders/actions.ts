@@ -14,7 +14,6 @@ import type { CheckoutInput, UpdateOrderStatusInput } from "@/lib/validations/or
 import { requireUser, requireAdmin, getCurrentProfile } from "@/lib/permissions";
 import { enforceRateLimit, getRequestIp } from "@/lib/auth/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { searchProducts } from "@/lib/products/queries";
 import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/audit";
 import { notifyOrderCreated, notifyOrderStatusChanged } from "@/lib/notifications/events";
@@ -54,8 +53,16 @@ export interface SuggestedProduct {
 }
 
 /**
- * Public: a few in-stock products not already in the cart, so the cart and
- * checkout pages can offer "add more" without sending the customer away.
+ * Products with any tag containing the word "box" (any capitalisation —
+ * "Gift Box", "Small Box", "BOX") are offered as cart add-ons. Whole word
+ * only, so e.g. "Boxing Day" or "Inbox" don't match.
+ */
+const CART_ADD_ON_TAG_WORD = /\bbox(es)?\b/i;
+
+/**
+ * Public: in-stock products with a "box" tag (e.g. "Gift Box") that aren't already in the cart, so
+ * the cart and checkout pages can offer them as add-ons without sending the
+ * customer away.
  */
 export async function getSuggestedProductsAction(
   excludeProductIds: number[],
@@ -64,22 +71,32 @@ export async function getSuggestedProductsAction(
   if (!parsed.success) return actionError("Invalid cart data.");
 
   const supabase = await createServerSupabaseClient();
-  const result = await searchProducts(
-    supabase,
-    { inStockOnly: true, sort: "newest", page: 1 },
-    { pageSize: 24 },
-  );
+  // Narrow in SQL with a case-insensitive substring match, then keep whole-word matches only.
+  const { data: tags } = await supabase.from("tags").select("id, name").ilike("name", "%box%");
+  const tagIds = (tags ?? []).filter((t) => CART_ADD_ON_TAG_WORD.test(t.name)).map((t) => t.id);
+  if (tagIds.length === 0) return actionOk([]);
+
+  const { data: links } = await supabase.from("product_tags").select("product_id").in("tag_id", tagIds).limit(200);
   const exclude = new Set(parsed.data);
+  // A product can carry more than one box tag — de-duplicate.
+  const candidateIds = [...new Set((links ?? []).map((l) => l.product_id))].filter((id) => !exclude.has(id));
+  if (candidateIds.length === 0) return actionOk([]);
+
+  // Same fresh price/stock/active lookup the cart itself uses.
+  const details = await refreshCartDetails(
+    candidateIds.map((productId) => ({ productId, quantity: 1 })),
+    supabase,
+  );
   return actionOk(
-    result.items
-      .filter((p) => !exclude.has(p.id) && p.quantity_in_stock > 0)
+    details
+      .filter((d) => d.exists && d.isActive && d.availableStock > 0)
       .slice(0, 8)
-      .map((p) => ({
-        id: p.id,
-        name: p.name,
-        slug: p.slug,
-        price: p.price_after_discount,
-        imageUrl: p.primary_image_url,
+      .map((d) => ({
+        id: d.productId,
+        name: d.name,
+        slug: d.slug,
+        price: d.unitPrice,
+        imageUrl: d.imageUrl,
       })),
   );
 }
